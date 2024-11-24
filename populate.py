@@ -1,7 +1,7 @@
 from elasticsearch import Elasticsearch
 import csv
 
-es = Elasticsearch(["hsttp://localhost:9200"])
+es = Elasticsearch(["http://localhost:9200"])
 
 index_settings = {
     "settings": {
@@ -69,7 +69,7 @@ es.indices.create(index="index_settings", body=index_settings)
 with open('Texas Last Statement_utf8.csv', 'r', encoding='UTF-8') as csvfile:
     reader = csv.DictReader(csvfile)
     #reader.fieldnames = [name.strip() for name in reader.fieldnames] Doesnt work
-    #reader.fieldnames = [name.strip().replace(' ', '_').replace('\u00a0', '').replace('\t', '') 
+    #reader.fieldnames = [name.strip().replace(' ', '_').replace('\u00a0', '').replace('\t', '')
                          #for name in reader.fieldnames]
 
     #print("Cleaned fieldnames:", reader.fieldnames)
