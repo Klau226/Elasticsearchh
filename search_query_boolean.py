@@ -1,7 +1,5 @@
-from elasticsearch import Elasticsearch
-
-# Σύνδεση με Elasticsearch
-es = Elasticsearch("http://localhost:9200")
+""" Import the connection. don't rewrite the same code every time """
+from connect import es
 
 def parse_user_query(user_query):
     """
@@ -85,86 +83,89 @@ def search_with_boolean_query(index, user_query, k = 5):
     """
     Εκτελεί την αναζήτηση στο Elasticsearch με Boolean query.
     """
-    
+
     query = parse_user_query(user_query)
     try:
         response = es.search(index=index, body=query, size= k)
         hits = response['hits']['hits']
-        
+
         return hits
     except Exception as e:
         print(f"Error: {e}")
         return []
 
-#if __name__ == "__main__":
-    # Παράδειγμα Boolean query από τον χρήστη
-print("!! ΣΗΜΕΙΩΣΗ: Μπορείς να πατήσεις 'h' ή 'help' για να δεις παραδείγματα φράσεων και λέξεων !!")
-print("Δώστε το ερώτημά σας σε Boolean μορφή (π.χ., ethnicity:\"Hispanic\" AND innocence_claim:true AND age_at_arrest:[18 TO 25]):")
 
-while True:
-    user_query = input("Ερώτημα: ").strip()
-    if user_query.lower() in ["h", "help"]:
-        print("\n📌 **Παραδείγματα Υποστηριζόμενων Ερωτημάτων** 📌\n")
-        print("1️⃣ **Απλή Αναζήτηση**:")
-        print("   - `FirstName:'το όνομα που θες'`")
-        print("   - `Age:25`")
-        print()
-        print("2️⃣ **Σύνθετη Αναζήτηση με Λογικούς Τελεστές (Boolean Operators)**:")
-        print("   - `FirstName:mario AND Age:>30`")
-        print("   - `FirstName:mario AND NOT Age:<=20`")
-        print("   - `Age:[10 TO 35]`")
-        print()
-        print("3️⃣ **Συνδυαστική Αναζήτηση με AND, OR και NOT**:")
-        print("   - `FirstName:mario AND LastName:beep OR LastName:boop`")
-        print("   - `FirstName:mario AND NOT LastName:baap`")
-        print()
-        print("4️⃣ **Αναζήτηση Πεδίων με Άδειες ή Μη Άδειες Τιμές**:")
-        print("   - `FirstName:mario AND LastName:NULL`")
-        print("   - `FirstName:mario AND NOT LastName:NULL`")
-        print()
-        print("🔹 **Σημείωση**: Μπορείς να χρησιμοποιήσεις τελεστές σύγκρισης όπως `>`, `<`, `>=`, `<=` ή εύρος `[Α TO Β]` για αριθμούς.\n")
-        print("**Keywords**        ")
-        print("Execution, FirstName, LastName, Age, TDCJNumber, Race, CountyOfConviction, AgeWhenReceived, EducationLevel, NativeCounty, PreviousCrime")
-        print("Codefendants, NumberVictim, WhiteVictim, HispanicVictim, BlackVictim, VictimOtherRaces, FemaleVictim, MaleVictim, LastStatement\n")
-    else:
-        # Επεξεργασία της εισόδου του χρήστη
-        print("Εκτέλεση αναζήτησης για:", user_query)
-        break
 
-while True:
-    user_input = input("Θέλεις να περιορίσεις τον αριθμό των αποτελεσμάτων; Πάτα 1 (προεπιλογή k = 5): ")
-    if user_input.isdigit():  # Έλεγχος αν η είσοδος είναι αριθμητική
-        user_k = int(user_input)
-        if user_k == 1:
-            try:
-                k = int(input("Δώστε τον αριθμό των αποτελεσμάτων (K): "))
-                print(f"Θα εμφανιστούν {k} αποτελέσματα.")
-                results = search_with_boolean_query("index_settings", user_query, k)
-            except ValueError:
-                print("Μη έγκυρος αριθμός. Θα χρησιμοποιηθεί η προεπιλογή (5 αποτελέσματα).")
-                results = search_with_boolean_query("index_settings", user_query)
+def search_query_boolean_main():
+    """ Wrap the functionality inside a main function so that you can call it by name """
+
+    print("!! ΣΗΜΕΙΩΣΗ: Μπορείς να πατήσεις 'h' ή 'help' για να δεις παραδείγματα φράσεων και λέξεων !!")
+    print("Δώστε το ερώτημά σας σε Boolean μορφή (π.χ., ethnicity:\"Hispanic\" AND innocence_claim:true AND age_at_arrest:[18 TO 25]):")
+
+    while True:
+        user_query = input("Ερώτημα: ").strip()
+        if user_query.lower() in ["h", "help"]:
+            print("\n📌 **Παραδείγματα Υποστηριζόμενων Ερωτημάτων** 📌\n")
+            print("1️⃣ **Απλή Αναζήτηση**:")
+            print("   - `FirstName:'το όνομα που θες'`")
+            print("   - `Age:25`")
+            print()
+            print("2️⃣ **Σύνθετη Αναζήτηση με Λογικούς Τελεστές (Boolean Operators)**:")
+            print("   - `FirstName:mario AND Age:>30`")
+            print("   - `FirstName:mario AND NOT Age:<=20`")
+            print("   - `Age:[10 TO 35]`")
+            print()
+            print("3️⃣ **Συνδυαστική Αναζήτηση με AND, OR και NOT**:")
+            print("   - `FirstName:mario AND LastName:beep OR LastName:boop`")
+            print("   - `FirstName:mario AND NOT LastName:baap`")
+            print()
+            print("4️⃣ **Αναζήτηση Πεδίων με Άδειες ή Μη Άδειες Τιμές**:")
+            print("   - `FirstName:mario AND LastName:NULL`")
+            print("   - `FirstName:mario AND NOT LastName:NULL`")
+            print()
+            print("🔹 **Σημείωση**: Μπορείς να χρησιμοποιήσεις τελεστές σύγκρισης όπως `>`, `<`, `>=`, `<=` ή εύρος `[Α TO Β]` για αριθμούς.\n")
+            print("**Keywords**        ")
+            print("Execution, FirstName, LastName, Age, TDCJNumber, Race, CountyOfConviction, AgeWhenReceived, EducationLevel, NativeCounty, PreviousCrime")
+            print("Codefendants, NumberVictim, WhiteVictim, HispanicVictim, BlackVictim, VictimOtherRaces, FemaleVictim, MaleVictim, LastStatement\n")
         else:
-            print("Θα εμφανιστούν 5 αποτελέσματα (προεπιλογή).")
-            results = search_with_boolean_query("index_settings", user_query)
-        break  # Έξοδος από τον βρόχο όταν η είσοδος είναι έγκυρη
-    else:
-        print("Μη έγκυρη είσοδος! Πληκτρολογήστε έναν αριθμό.")
+            # Επεξεργασία της εισόδου του χρήστη
+            print("Εκτέλεση αναζήτησης για:", user_query)
+            break
 
-try:
-    # Εμφάνιση αποτελεσμάτων
-    if results:
-        print("Αποτελέσματα αναζήτησης:")
-        for i, record in enumerate(results):   
-            source = record["_source"]
-            score = record["_score"]
-            print(f"\n🔸 Εγγραφή {i+1}: (Σκορ: {score:.2f})")
-            print(f"~ {source}")
-                
-    else:
-        print("Δεν βρέθηκαν αποτελέσματα για το ερώτημά σας.")
-except ValueError as ve:
-    print(ve)
-    exit(1)
-except Exception as e:
-    print(e)
-    exit(1)
+    while True:
+        user_input = input("Θέλεις να περιορίσεις τον αριθμό των αποτελεσμάτων; Πάτα 1 (προεπιλογή k = 5): ")
+        if user_input.isdigit():  # Έλεγχος αν η είσοδος είναι αριθμητική
+            user_k = int(user_input)
+            if user_k == 1:
+                try:
+                    k = int(input("Δώστε τον αριθμό των αποτελεσμάτων (K): "))
+                    print(f"Θα εμφανιστούν {k} αποτελέσματα.")
+                    results = search_with_boolean_query("index_settings", user_query, k)
+                except ValueError:
+                    print("Μη έγκυρος αριθμός. Θα χρησιμοποιηθεί η προεπιλογή (5 αποτελέσματα).")
+                    results = search_with_boolean_query("index_settings", user_query)
+            else:
+                print("Θα εμφανιστούν 5 αποτελέσματα (προεπιλογή).")
+                results = search_with_boolean_query("index_settings", user_query)
+            break  # Έξοδος από τον βρόχο όταν η είσοδος είναι έγκυρη
+        else:
+            print("Μη έγκυρη είσοδος! Πληκτρολογήστε έναν αριθμό.")
+
+    try:
+        # Εμφάνιση αποτελεσμάτων
+        if results:
+            print("Αποτελέσματα αναζήτησης:")
+            for i, record in enumerate(results):
+                source = record["_source"]
+                score = record["_score"]
+                print(f"\n🔸 Εγγραφή {i+1}: (Σκορ: {score:.2f})")
+                print(f"~ {source}")
+
+        else:
+            print("Δεν βρέθηκαν αποτελέσματα για το ερώτημά σας.")
+    except ValueError as ve:
+        print(ve)
+        exit(1)
+    except Exception as e:
+        print(e)
+        exit(1)
