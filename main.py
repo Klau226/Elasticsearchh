@@ -1,52 +1,38 @@
-import argparse
 """ Import functions from different files """
 from search_query_boolean import search_query_boolean_main
-from delete_indices import delete_indices
+from add_document import add_document_main
+from delete_documents import delete_documents_main
 from populate import populate_main
-
-""" Execute with the desired arguments
-    Examples:
-    - python main.py --search_query_boolean
-    - python main.py --delete_indiced
-    - python main.py --populate_main
-    .... Add more arguments accordingly..
-
-"""
+from delete_index import delete_index_main
+from inmate_statistics import statistics
 
 def main() -> None:
+    """ Main scipt where the user chooses what he wants to do """
 
-    """ Read arguments from the command line """
-    parser = argparse.ArgumentParser(
-        description="A tool to read and evaluate Fotokite's Code Category configuration."
-    )
-    parser.add_argument(
-        "--search_query_boolean",
-        action="store_true",
-        help="",
-    )
-    parser.add_argument(
-        "--delete_indices",
-        action="store_true",
-        help="",
-    )
-    parser.add_argument(
-        "--populate_main",
-        action="store_true",
-        help="",
-    )
-
-    """ Parse the arguments to a variable """
-    args = parser.parse_args()
-
-    """ Depending on the argument, call the appropriate function """
-    if args.search_query_boolean:
-        search_query_boolean_main()
-
-    if args.delete_indices:
-        delete_indices()
-
-    if args.populate_main:
-        populate_main()
+    print("\n")
+    print("!! ΣΗΜΕΙΩΣΗ: Πληκτρολογήστε 8 εάν είναι η πρώτη φόρα που εκκινείται το πρόγραμμα για την προσθήκη εγγράφων, 9 για διαγραφή όλων των εγγράφων\n")
+    while True:
+            # Prompt the user for input
+            
+            user_input = input("Πληκτρολογήστε 1 για αναζήτηση, 2 προσθήκη εγγράφων, 3 για διαγραφή εγγράφων, 4 για στατιστικά κρατουμένων ή 'exit' για έξοδο: \n")
+            
+            if user_input == '1':
+                search_query_boolean_main()  # Search Documents
+            elif user_input == '2':          
+                add_document_main()          # Add Documents
+            elif user_input == '3':
+                delete_documents_main()      # Delete Documents
+            elif user_input == '4':
+                statistics()                 # Statistics
+            elif user_input == '8':
+                populate_main()                # Populate Elastic Search
+            elif user_input == '9':
+                delete_index_main()          # Delete All Documents From Elastic Search
+            elif user_input.lower() == 'exit':
+                print("Έξοδος από το πρόγραμμα.")
+                break  # Exit the loop and end the program
+            else:
+                print("⚠️  Μη έγκυρη επιλογή. Παρακαλώ δοκιμάστε ξανά.\n")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,8 @@
-""" Import the connection. don't rewrite the same code every time """
 from connect import es
 
 def parse_user_query(user_query):
     """
-    Μετατρέπει το Boolean query του χρήστη σε Elasticsearch DSL.
+    Converts the user's Boolean query to an Elasticsearch DSL.
     """
     query = {
         "query": {
@@ -15,12 +14,12 @@ def parse_user_query(user_query):
         }
     }
 
-    # Διαχωρισμός του user_query σε όρους με βάση το AND
+    # Split user_query into conditions based on AND or OR
     conditions = user_query.split(" AND ")
     for condition in conditions:
         try:
             if "NOT" in condition:
-                # Διαχείριση του NOT
+                # Management of NOT
                 field, value = condition.replace("NOT ", "").split(":")
                 if "<" in value or ">" in value:
                     range_query = {}
@@ -32,21 +31,41 @@ def parse_user_query(user_query):
                 else:
                     query["query"]["bool"]["must_not"].append({"match": {field.strip(): value.strip().strip('"')}})
             elif "OR" in condition:
-                # Διαχείριση του OR
+                # Management of OR
                 sub_conditions = condition.split(" OR ")
                 should_conditions = []
                 for sub_condition in sub_conditions:
                     field, value = sub_condition.split(":")
-                    if value.strip().upper() == "NULL":
+                    if ">" in value or "<" in value or "[" in value:
+                        # Handle range conditions in OR
+                        range_query = {}
+                        if ">" in value:
+                            if ">=" in value:
+                                range_query["gte"] = value.split(">=")[1].strip()
+                            else:
+                                range_query["gt"] = value.split(">")[1].strip()
+                        if "<" in value:
+                            if "<=" in value:
+                                range_query["lte"] = value.split("<=")[1].strip()
+                            else:
+                                range_query["lt"] = value.split("<")[1].strip()
+                        if "[" in value and "TO" in value:  # From ex.[10 TO 20] or [30 TO 70]
+                            range_values = value.strip().strip("[]").split(" TO ")
+                            range_query["gte"] = range_values[0].strip()
+                            range_query["lte"] = range_values[1].strip()
+                        should_conditions.append({"range": {field.strip(): range_query}})
+                    elif value.strip().upper() == "NULL":
+                        # Management of NULL in OR
                         should_conditions.append({"bool": {"must_not": {"exists": {"field": field.strip()}}}})
                     else:
+                        # Simple matching in OR
                         should_conditions.append({"match": {field.strip(): value.strip().strip('"')}})
                 query["query"]["bool"]["should"].extend(should_conditions)
             else:
-                # Διαχείριση του AND
+                # Management of AND
                 field, value = condition.split(":")
                 if ">" in value or "<" in value or "[" in value:
-                    # Διαχείριση range conditions
+                    # Range conditions (for >,>=,<,<=)
                     range_query = {}
                     if ">" in value:
                         if ">=" in value:
@@ -58,22 +77,19 @@ def parse_user_query(user_query):
                             range_query["lte"] = value.split("<=")[1].strip()
                         else:
                             range_query["lt"] = value.split("<")[1].strip()
-                    if "[" in value and "TO" in value:
+                    if "[" in value and "TO" in value: # From ex.[10 TO 20] or [30 TO 70]
                         range_values = value.strip().strip("[]").split(" TO ")
                         range_query["gte"] = range_values[0]
                         range_query["lte"] = range_values[1]
                     query["query"]["bool"]["must"].append({"range": {field.strip(): range_query}})
                 elif value.strip().upper() == "NULL":
-                    # Διαχείριση NULL
+                # NULL logic
                     query["query"]["bool"]["must_not"].append({"exists": {"field": field.strip()}})
-                elif value.strip().upper() == "NOT NULL":
-                    # Διαχείριση NOT NULL
-                    query["query"]["bool"]["must"].append({"exists": {"field": field.strip()}})
                 else:
-                    # Απλή αντιστοίχιση
+                    # Simple matching
                     query["query"]["bool"]["must"].append({"match": {field.strip(): value.strip().strip('"')}})
         except ValueError:
-            raise ValueError(f"Σφάλμα στο μέρος του ερωτήματος: '{condition}'. Ελέγξτε τη σύνταξή του(AND,OR,NOT και FirstName:το όνομα που θές)")
+            raise ValueError(f"Σφάλμα στο μέρος του ερωτήματος: '{condition}'. Ελέγξτε τη σύνταξή του(AND,OR,NOT και π.χ(FirstName:το όνομα που θές) ή Age:>13) ΣΗΜΕΙΩΣΗ: Μπορείς πάντα να πατήσεις 'h' για βοήθεια")
         except Exception as e:
             raise Exception(f"Σφάλμα κατά την επεξεργασία του ερωτήματος: '{condition}'. Σφάλμα: {e}")
 
@@ -81,29 +97,28 @@ def parse_user_query(user_query):
 
 def search_with_boolean_query(index, user_query, k = 5):
     """
-    Εκτελεί την αναζήτηση στο Elasticsearch με Boolean query.
+    Performs the search in Elasticsearch with a Boolean query.
     """
-
-    query = parse_user_query(user_query)
+    
     try:
-        response = es.search(index=index, body=query, size= k)
+        query = parse_user_query(user_query) 
+        response = es.search(index=index, body=query, size=k)
         hits = response['hits']['hits']
-
         return hits
+    except ValueError as ve:
+        print(f"🔴 Σφάλμα σύνταξης: {ve}")
+        return []
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"🔴 Σφάλμα κατά την αναζήτηση: {e}")
         return []
 
-
-
 def search_query_boolean_main():
-    """ Wrap the functionality inside a main function so that you can call it by name """
-
     print("!! ΣΗΜΕΙΩΣΗ: Μπορείς να πατήσεις 'h' ή 'help' για να δεις παραδείγματα φράσεων και λέξεων !!")
     print("Δώστε το ερώτημά σας σε Boolean μορφή (π.χ., ethnicity:\"Hispanic\" AND innocence_claim:true AND age_at_arrest:[18 TO 25]):")
 
     while True:
         user_query = input("Ερώτημα: ").strip()
+        # Instructions
         if user_query.lower() in ["h", "help"]:
             print("\n📌 **Παραδείγματα Υποστηριζόμενων Ερωτημάτων** 📌\n")
             print("1️⃣ **Απλή Αναζήτηση**:")
@@ -111,59 +126,56 @@ def search_query_boolean_main():
             print("   - `Age:25`")
             print()
             print("2️⃣ **Σύνθετη Αναζήτηση με Λογικούς Τελεστές (Boolean Operators)**:")
-            print("   - `FirstName:mario AND Age:>30`")
-            print("   - `FirstName:mario AND NOT Age:<=20`")
+            print("   - `FirstName:John AND Age:>30`")
+            print("   - `FirstName:John AND NOT Age:<=20`")
             print("   - `Age:[10 TO 35]`")
             print()
             print("3️⃣ **Συνδυαστική Αναζήτηση με AND, OR και NOT**:")
-            print("   - `FirstName:mario AND LastName:beep OR LastName:boop`")
-            print("   - `FirstName:mario AND NOT LastName:baap`")
+            print("   - `FirstName:John AND LastName:beep OR LastName:boop`")
+            print("   - `FirstName:John AND NOT LastName:baap`")
             print()
             print("4️⃣ **Αναζήτηση Πεδίων με Άδειες ή Μη Άδειες Τιμές**:")
-            print("   - `FirstName:mario AND LastName:NULL`")
-            print("   - `FirstName:mario AND NOT LastName:NULL`")
+            print("   - `FirstName:john AND LastName:NULL`")
+            print("   - `FirstName:john AND NOT LastName:NULL`")
             print()
             print("🔹 **Σημείωση**: Μπορείς να χρησιμοποιήσεις τελεστές σύγκρισης όπως `>`, `<`, `>=`, `<=` ή εύρος `[Α TO Β]` για αριθμούς.\n")
             print("**Keywords**        ")
             print("Execution, FirstName, LastName, Age, TDCJNumber, Race, CountyOfConviction, AgeWhenReceived, EducationLevel, NativeCounty, PreviousCrime")
             print("Codefendants, NumberVictim, WhiteVictim, HispanicVictim, BlackVictim, VictimOtherRaces, FemaleVictim, MaleVictim, LastStatement\n")
         else:
-            # Επεξεργασία της εισόδου του χρήστη
+            # Edit user input
             print("Εκτέλεση αναζήτησης για:", user_query)
             break
 
     while True:
-        user_input = input("Θέλεις να περιορίσεις τον αριθμό των αποτελεσμάτων; Πάτα 1 (προεπιλογή k = 5): ")
-        if user_input.isdigit():  # Έλεγχος αν η είσοδος είναι αριθμητική
-            user_k = int(user_input)
-            if user_k == 1:
-                try:
-                    k = int(input("Δώστε τον αριθμό των αποτελεσμάτων (K): "))
-                    print(f"Θα εμφανιστούν {k} αποτελέσματα.")
-                    results = search_with_boolean_query("index_settings", user_query, k)
-                except ValueError:
-                    print("Μη έγκυρος αριθμός. Θα χρησιμοποιηθεί η προεπιλογή (5 αποτελέσματα).")
-                    results = search_with_boolean_query("index_settings", user_query)
+        try:
+            user_input = input("Θέλεις να περιορίσεις τον αριθμό των αποτελεσμάτων; Πάτα 1 (προεπιλογή k = 5): \n") # checks if the user wants Top K- results
+            if user_input.isdigit():
+                user_k = int(user_input)
+                if user_k == 1:
+                    k = int(input("Δώστε τον αριθμό των αποτελεσμάτων (K): ").strip())
+                else:
+                    k = 5  # Default
+                break
             else:
-                print("Θα εμφανιστούν 5 αποτελέσματα (προεπιλογή).")
-                results = search_with_boolean_query("index_settings", user_query)
-            break  # Έξοδος από τον βρόχο όταν η είσοδος είναι έγκυρη
-        else:
-            print("Μη έγκυρη είσοδος! Πληκτρολογήστε έναν αριθμό.")
+                print("🔴 Μη έγκυρη είσοδος! Πληκτρολογήστε έναν αριθμό.")
+        except ValueError:
+             print("🔴 Μη έγκυρη είσοδος! Προσπαθήστε ξανά.")
 
+    results = search_with_boolean_query("index_settings", user_query, k)
     try:
-        # Εμφάνιση αποτελεσμάτων
+        # Show results
         if results:
             print("Αποτελέσματα αναζήτησης:")
-            for i, record in enumerate(results):
+            for i, record in enumerate(results):   
                 source = record["_source"]
                 score = record["_score"]
                 print(f"\n🔸 Εγγραφή {i+1}: (Σκορ: {score:.2f})")
                 print(f"~ {source}")
-
+                    
         else:
-            print("Δεν βρέθηκαν αποτελέσματα για το ερώτημά σας.")
-    except ValueError as ve:
+            print("⛔ Δεν βρέθηκαν αποτελέσματα για το ερώτημά σας.\n")
+    except ValueError as ve:  # try-except for errors that i didnt encounter in my testings with the _source and _score
         print(ve)
         exit(1)
     except Exception as e:

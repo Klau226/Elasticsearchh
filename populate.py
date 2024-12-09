@@ -1,8 +1,8 @@
-import csv
-""" Avoid duplicate code, import the Elasticsearch connection """
 from connect import es
+import csv
 
-""" Wrap the code in a function to avoid global variables """
+"""Script for populating the data from the csv to Elastic Search"""
+
 def populate_main():
     index_settings = {
         "settings": {
@@ -63,22 +63,17 @@ def populate_main():
         }
     }
 
-    # Create the index
+    # Creating the index
     es.indices.create(index="index_settings", body=index_settings)
 
-    # Ingest the data
+    # Ingesting the data
     with open('Texas Last Statement_utf8.csv', 'r', encoding='UTF-8') as csvfile:
         reader = csv.DictReader(csvfile)
-        #reader.fieldnames = [name.strip() for name in reader.fieldnames] Doesnt work
-        #reader.fieldnames = [name.strip().replace(' ', '_').replace('\u00a0', '').replace('\t', '')
-                            #for name in reader.fieldnames]
-
-        #print("Cleaned fieldnames:", reader.fieldnames)
         row_count = 0
         for row in reader:
             try:
                 row_count += 1
-                # Prepare processed fields
+                # Preparing processed fields so null converts to 'NA' or 'none' as the csv file
                 doc = {
                     "Execution": int(row["Execution"]) if row["Execution"] and row["Execution"].strip() != 'NA' else None,
                     "FirstName": row["FirstName"].strip() if row["FirstName"] and row["FirstName"].strip() != 'NA' else None,
@@ -90,7 +85,6 @@ def populate_main():
                     "AgeWhenReceived": int(row["AgeWhenReceived"]) if row["AgeWhenReceived"] and row["AgeWhenReceived"].strip() != 'NA' else None,
                     "EducationLevel": int(row["EducationLevel"]) if row["EducationLevel"] and row["EducationLevel"].strip() != 'NA' else None,
                     "NativeCounty": int(row["NativeCounty "]) if row["NativeCounty "] and row["NativeCounty "].strip() != 'NA' else None,
-                    #"NativeCounty ": bool(int(row["NativeCounty "])) if row["NativeCounty "] and row["NativeCounty "].strip() != 'NA' else None,
                     "PreviousCrime": int(row["PreviousCrime"]) if row["PreviousCrime"] and row["PreviousCrime"].strip() != 'NA' else None,
                     "Codefendants": int(row["Codefendants"]) if row["Codefendants"] and row["Codefendants"].strip() != 'NA' else None,
                     "NumberVictim": int(row["NumberVictim"]) if row["NumberVictim"] and row["NumberVictim"].strip() != 'NA' else None,
@@ -102,16 +96,10 @@ def populate_main():
                     "MaleVictim": int(row["MaleVictim"]) if row["MaleVictim"] and row["MaleVictim"].strip() != 'NA' else None,
                     "LastStatement": row["LastStatement"].strip() if row["LastStatement"] and row["LastStatement"].strip() != 'NA' else None
                 }
-
-                print("Indexed document:", doc)  # Optional for debugging
-
                 # Index document
                 es.index(index="index_settings", body=doc)
-
             except Exception as e:
                 print(f"Error processing row {row_count}: {e}")
-                #print("Row data:", row)
-
         print(f"Total rows processed: {row_count}")
-        #print("Indexed document:", doc)  # Optional for debugging
+
 
